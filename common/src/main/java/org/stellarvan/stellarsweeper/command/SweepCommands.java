@@ -83,14 +83,14 @@ public final class SweepCommands {
                                 ))))
                 .then(literal("add")
                         .executes(SweepCommandHandlers::addHeldItem)
-                        .then(argument("itemId", StringArgumentType.word())
+                        .then(argument("itemId", StringArgumentType.greedyString())
                                 .suggests(SweepCommandHandlers::suggestAllItems)
                                 .executes(context -> SweepCommandHandlers.addItemById(
                                         context,
                                         StringArgumentType.getString(context, "itemId")
                                 ))))
                 .then(literal("remove")
-                        .then(argument("itemId", StringArgumentType.word())
+                        .then(argument("itemId", StringArgumentType.greedyString())
                                 .suggests(SweepCommandHandlers::suggestActiveListItems)
                                 .executes(context -> SweepCommandHandlers.removeItemById(
                                         context,
