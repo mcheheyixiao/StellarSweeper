@@ -11,19 +11,12 @@
     "homepage": "www.stellarvan.cn"
   },
   "license": "MIT",
-  "icon": "assets/stellarsweeper/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "org.stellarvan.stellarsweeper.fabric.StellarsweeperFabric"
-    ],
-    "client": [
-      "org.stellarvan.stellarsweeper.fabric.client.StellarsweeperFabricClient"
+      "org.stellarvan.stellarsweeper.fabric.StellarSweeperFabric"
     ]
   },
-  "mixins": [
-    "stellarsweeper.mixins.json"
-  ],
   "depends": {
     "fabricloader": ">=0.19.2",
     "minecraft": "~1.21.1",
