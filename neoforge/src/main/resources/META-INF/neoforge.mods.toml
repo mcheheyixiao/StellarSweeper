@@ -11,7 +11,7 @@ authors = "StellarVan"
 description = '''
 
 '''
-#logoFile = ""
+logoFile = "assets/stellarsweeper/icon.png"
 
 [[dependencies.stellarsweeper]]
 modId = "neoforge"

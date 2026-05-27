@@ -9,9 +9,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -32,31 +34,52 @@ public final class SweepCommandHandlers {
     }
 
     public static int showShortHelp(CommandContext<CommandSourceStack> context) {
-        Messages.feedback(context.getSource(), "stellarsweeper.help.header", false);
-        Messages.feedback(context.getSource(), "stellarsweeper.help.usage", false, "/sweep help");
+        CommandSourceStack source = context.getSource();
+        source.sendSuccess(() -> Messages.info(
+                "stellarsweeper.help.short",
+                Messages.suggestCommand("/sweep help")
+        ), false);
+        source.sendSuccess(() -> Messages.info(
+                "stellarsweeper.help.short.common",
+                Messages.suggestCommand("/sweep preview"),
+                Messages.suggestCommand("/sweep run")
+        ), false);
         return 1;
     }
 
     public static int showHelp(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
-        Messages.feedback(source, "stellarsweeper.help.header", false);
-        sendUsage(source, "/sweep run");
-        sendUsage(source, "/sweep preview");
-        sendUsage(source, "/sweep reload");
-        sendUsage(source, "/sweep save");
-        sendUsage(source, "/sweep toggle auto|threshold");
-        sendUsage(source, "/sweep set interval <ticks>");
-        sendUsage(source, "/sweep set threshold <count>");
-        sendUsage(source, "/sweep set radius <blocks>");
-        sendUsage(source, "/sweep set y <min> <max>");
-        sendUsage(source, "/sweep list [listName]");
-        sendUsage(source, "/sweep lists");
-        sendUsage(source, "/sweep list-create <listName>");
-        sendUsage(source, "/sweep list-delete <listName>");
-        sendUsage(source, "/sweep list-use <listName>");
-        sendUsage(source, "/sweep add [itemId]");
-        sendUsage(source, "/sweep remove <itemId>");
-        sendUsage(source, "/sweep confirm <requestId> yes|no");
+        source.sendSuccess(() -> Messages.info("stellarsweeper.help.header"), false);
+        source.sendSuccess(Messages::divider, false);
+
+        source.sendSuccess(() -> Messages.sectionHeader("stellarsweeper.help.common"), false);
+        sendCommandLine(source, "/sweep run", "stellarsweeper.help.desc.run");
+        sendCommandLine(source, "/sweep preview", "stellarsweeper.help.desc.preview");
+        sendCommandLine(source, "/sweep reload", "stellarsweeper.help.desc.reload");
+        sendCommandLine(source, "/sweep save", "stellarsweeper.help.desc.save");
+
+        source.sendSuccess(() -> Messages.sectionHeader("stellarsweeper.help.automation"), false);
+        sendCommandLine(source, "/sweep toggle auto", "stellarsweeper.help.desc.toggle_auto");
+        sendCommandLine(source, "/sweep toggle threshold", "stellarsweeper.help.desc.toggle_threshold");
+        sendCommandLine(source, "/sweep set interval <ticks>", "stellarsweeper.help.desc.set_interval");
+        sendCommandLine(source, "/sweep set threshold <count>", "stellarsweeper.help.desc.set_threshold");
+        sendCommandLine(source, "/sweep set radius <blocks>", "stellarsweeper.help.desc.set_radius");
+        sendCommandLine(source, "/sweep set y <min> <max>", "stellarsweeper.help.desc.set_y");
+
+        source.sendSuccess(() -> Messages.sectionHeader("stellarsweeper.help.lists"), false);
+        sendCommandLine(source, "/sweep list [listName]", "stellarsweeper.help.desc.list");
+        sendCommandLine(source, "/sweep lists", "stellarsweeper.help.desc.lists");
+        sendCommandLine(source, "/sweep list-create <listName>", "stellarsweeper.help.desc.list_create");
+        sendCommandLine(source, "/sweep list-delete <listName>", "stellarsweeper.help.desc.list_delete");
+        sendCommandLine(source, "/sweep list-use <listName>", "stellarsweeper.help.desc.list_use");
+
+        source.sendSuccess(() -> Messages.sectionHeader("stellarsweeper.help.items"), false);
+        sendCommandLine(source, "/sweep add", "stellarsweeper.help.desc.add_held");
+        sendCommandLine(source, "/sweep add <itemId>", "stellarsweeper.help.desc.add_id");
+        sendCommandLine(source, "/sweep remove <itemId>", "stellarsweeper.help.desc.remove");
+
+        source.sendSuccess(Messages::divider, false);
+        source.sendSuccess(() -> Messages.warning("stellarsweeper.help.tip_click"), false);
         return 1;
     }
 
@@ -79,13 +102,13 @@ public final class SweepCommandHandlers {
 
     public static int reloadConfig(CommandContext<CommandSourceStack> context) {
         StellarSweeper.configManager().reload();
-        Messages.feedback(context.getSource(), "stellarsweeper.config.reloaded", false);
+        Messages.success(context.getSource(), "stellarsweeper.config.reloaded", false);
         return 1;
     }
 
     public static int saveConfig(CommandContext<CommandSourceStack> context) {
         StellarSweeper.configManager().save();
-        Messages.feedback(context.getSource(), "stellarsweeper.config.saved", false);
+        Messages.success(context.getSource(), "stellarsweeper.config.saved", false);
         return 1;
     }
 
@@ -93,8 +116,11 @@ public final class SweepCommandHandlers {
         SweeperConfig config = StellarSweeper.configManager().get();
         config.enableAutoCleanup = !config.enableAutoCleanup;
         StellarSweeper.configManager().save();
-        String key = config.enableAutoCleanup ? "stellarsweeper.toggle.auto.enabled" : "stellarsweeper.toggle.auto.disabled";
-        Messages.feedback(context.getSource(), key, true);
+        if (config.enableAutoCleanup) {
+            Messages.success(context.getSource(), "stellarsweeper.toggle.auto.enabled", true);
+        } else {
+            Messages.warning(context.getSource(), "stellarsweeper.toggle.auto.disabled", true);
+        }
         return 1;
     }
 
@@ -102,10 +128,11 @@ public final class SweepCommandHandlers {
         SweeperConfig config = StellarSweeper.configManager().get();
         config.enableThresholdCheck = !config.enableThresholdCheck;
         StellarSweeper.configManager().save();
-        String key = config.enableThresholdCheck
-                ? "stellarsweeper.toggle.threshold.enabled"
-                : "stellarsweeper.toggle.threshold.disabled";
-        Messages.feedback(context.getSource(), key, true);
+        if (config.enableThresholdCheck) {
+            Messages.success(context.getSource(), "stellarsweeper.toggle.threshold.enabled", true);
+        } else {
+            Messages.warning(context.getSource(), "stellarsweeper.toggle.threshold.disabled", true);
+        }
         return 1;
     }
 
@@ -113,7 +140,7 @@ public final class SweepCommandHandlers {
         SweeperConfig config = StellarSweeper.configManager().get();
         config.cleanupInterval = ticks;
         StellarSweeper.configManager().save();
-        Messages.feedback(context.getSource(), "stellarsweeper.set.interval", false, ticks);
+        Messages.success(context.getSource(), "stellarsweeper.set.interval", false, ticks);
         return 1;
     }
 
@@ -121,7 +148,7 @@ public final class SweepCommandHandlers {
         SweeperConfig config = StellarSweeper.configManager().get();
         config.itemThreshold = count;
         StellarSweeper.configManager().save();
-        Messages.feedback(context.getSource(), "stellarsweeper.set.threshold", false, count);
+        Messages.success(context.getSource(), "stellarsweeper.set.threshold", false, count);
         return 1;
     }
 
@@ -129,7 +156,7 @@ public final class SweepCommandHandlers {
         SweeperConfig config = StellarSweeper.configManager().get();
         config.cleanRadius = radius;
         StellarSweeper.configManager().save();
-        Messages.feedback(context.getSource(), "stellarsweeper.set.radius", false, radius);
+        Messages.success(context.getSource(), "stellarsweeper.set.radius", false, radius);
         return 1;
     }
 
@@ -142,7 +169,7 @@ public final class SweepCommandHandlers {
         config.yMin = min;
         config.yMax = max;
         StellarSweeper.configManager().save();
-        Messages.feedback(context.getSource(), "stellarsweeper.set.y", false, min, max);
+        Messages.success(context.getSource(), "stellarsweeper.set.y", false, min, max);
         return 1;
     }
 
@@ -163,10 +190,14 @@ public final class SweepCommandHandlers {
 
     public static int listAll(CommandContext<CommandSourceStack> context) {
         SweeperConfig config = StellarSweeper.configManager().get();
-        Messages.feedback(context.getSource(), "stellarsweeper.list.current", false, config.currentCleanupList);
+        CommandSourceStack source = context.getSource();
+        source.sendSuccess(() -> Messages.info("stellarsweeper.lists.title"), false);
+        source.sendSuccess(Messages::divider, false);
         for (String listName : config.cleanupLists.keySet()) {
-            context.getSource().sendSuccess(
-                    () -> net.minecraft.network.chat.Component.translatable("stellarsweeper.list.entry", listName),
+            List<String> items = config.cleanupLists.get(listName);
+            boolean active = listName.equals(config.currentCleanupList);
+            source.sendSuccess(
+                    () -> Messages.listSwitchEntry(listName, items == null ? 0 : items.size(), active),
                     false
             );
         }
@@ -179,14 +210,14 @@ public final class SweepCommandHandlers {
             Messages.error(context.getSource(), "stellarsweeper.list.already_exists", listName);
             return 0;
         }
-        Messages.feedback(context.getSource(), "stellarsweeper.list.created", false, listName);
+        Messages.success(context.getSource(), "stellarsweeper.list.created", false, listName);
         return 1;
     }
 
     public static int deleteList(CommandContext<CommandSourceStack> context, String listName) {
         ConfigManager.DeleteListResult result = StellarSweeper.configManager().deleteList(listName);
         if (result == ConfigManager.DeleteListResult.DELETED) {
-            Messages.feedback(context.getSource(), "stellarsweeper.list.deleted", false, listName);
+            Messages.success(context.getSource(), "stellarsweeper.list.deleted", false, listName);
             return 1;
         }
         if (result == ConfigManager.DeleteListResult.CANNOT_DELETE_CURRENT) {
@@ -207,7 +238,7 @@ public final class SweepCommandHandlers {
             Messages.error(context.getSource(), "stellarsweeper.list.not_found", listName);
             return 0;
         }
-        Messages.feedback(context.getSource(), "stellarsweeper.list.switched", false, listName);
+        Messages.success(context.getSource(), "stellarsweeper.list.switched", false, listName);
         return 1;
     }
 
@@ -226,7 +257,7 @@ public final class SweepCommandHandlers {
             Messages.error(context.getSource(), "stellarsweeper.item.already_exists", itemId);
             return 0;
         }
-        Messages.feedback(context.getSource(), "stellarsweeper.item.added", false, itemId);
+        Messages.success(context.getSource(), "stellarsweeper.item.added", false, itemId);
         return 1;
     }
 
@@ -242,7 +273,7 @@ public final class SweepCommandHandlers {
             Messages.error(context.getSource(), "stellarsweeper.item.already_exists", itemId);
             return 0;
         }
-        Messages.feedback(context.getSource(), "stellarsweeper.item.added", false, itemId);
+        Messages.success(context.getSource(), "stellarsweeper.item.added", false, itemId);
         return 1;
     }
 
@@ -252,7 +283,7 @@ public final class SweepCommandHandlers {
             Messages.error(context.getSource(), "stellarsweeper.item.not_found", itemId);
             return 0;
         }
-        Messages.feedback(context.getSource(), "stellarsweeper.item.removed", false, itemId);
+        Messages.success(context.getSource(), "stellarsweeper.item.removed", false, itemId);
         return 1;
     }
 
@@ -273,10 +304,10 @@ public final class SweepCommandHandlers {
             return 0;
         }
         if (result.status() == ThresholdPromptManager.ConfirmationStatus.DECLINED) {
-            Messages.feedback(context.getSource(), "stellarsweeper.confirm.no", true);
+            Messages.warning(context.getSource(), "stellarsweeper.confirm.no", true);
             return 1;
         }
-        Messages.feedback(context.getSource(), "stellarsweeper.confirm.yes", true);
+        Messages.success(context.getSource(), "stellarsweeper.confirm.yes", true);
         Messages.broadcastCleanupReport(context.getSource().getServer(), result.report(), false);
         return 1;
     }
@@ -298,18 +329,22 @@ public final class SweepCommandHandlers {
         );
     }
 
-    private static void sendUsage(CommandSourceStack source, String usage) {
-        source.sendSuccess(() -> net.minecraft.network.chat.Component.translatable("stellarsweeper.help.usage", usage), false);
+    private static void sendCommandLine(CommandSourceStack source, String command, String descriptionKey, Object... descriptionArgs) {
+        source.sendSuccess(() -> Messages.commandLine(command, descriptionKey, descriptionArgs), false);
     }
 
     private static int listNamedInternal(CommandSourceStack source, String listName, List<String> items) {
-        Messages.feedback(source, "stellarsweeper.list.current", false, listName);
+        source.sendSuccess(() -> Messages.info(
+                "stellarsweeper.list.title",
+                Component.literal(listName).withStyle(ChatFormatting.GREEN)
+        ), false);
+        source.sendSuccess(Messages::divider, false);
         if (items.isEmpty()) {
-            Messages.feedback(source, "stellarsweeper.list.empty", false);
+            Messages.warning(source, "stellarsweeper.list.empty", false);
             return 1;
         }
         for (String itemId : items) {
-            source.sendSuccess(() -> net.minecraft.network.chat.Component.translatable("stellarsweeper.list.item_entry", itemId), false);
+            source.sendSuccess(() -> Messages.listItemEntry(itemId), false);
         }
         return 1;
     }

@@ -11,6 +11,7 @@
     "homepage": "www.stellarvan.cn"
   },
   "license": "MIT",
+  "icon": "assets/stellarsweeper/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
